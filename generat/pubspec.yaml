@@ -1,0 +1,26 @@
+name: reband_generat
+description: Code generator for all reband_restful client implementations.
+version: 1.0.0
+homepage: https://github.com/rockyoung/reband
+repository: https://github.com/rockyoung/reband/blob/main/generat
+
+environment:
+  sdk: '>=2.12.0 <3.0.0'
+
+dependencies:
+  # build: ^2.1.0
+  code_builder: ^4.1.0
+  # dart_style: ^2.0.3
+  source_gen: ^1.1.0
+  logging: ^1.0.1
+  reband_restful:
+
+# For `example` and `test`
+dev_dependencies:
+  build_runner: ^2.1.1
+  test: ^1.17.10
+
+dependency_overrides:
+  # Comment before publish
+  reband_restful:
+    path: ../restful

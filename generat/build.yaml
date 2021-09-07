@@ -1,0 +1,9 @@
+# Read about `build.yaml` at https://pub.dartlang.org/packages/build_config
+builders:
+  reband_builder:
+    target: ":reband_generat"
+    import: "package:reband_generat/reband_builder.dart"
+    builder_factories: ["rebandBuilderFactory"]
+    build_extensions: {".dart": [".reband.dart"]}
+    auto_apply: root_package
+    build_to: source

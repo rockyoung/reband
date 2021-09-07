@@ -1,0 +1,461 @@
+/// @nodoc
+import 'dart:async';
+// import 'dart:html';
+
+import 'package:analyzer/dart/constant/value.dart';
+import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
+import 'package:analyzer/dart/element/type.dart';
+
+import 'package:build/build.dart';
+import 'package:build/src/builder/build_step.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:code_builder/code_builder.dart';
+import 'package:dart_style/dart_style.dart';
+import 'package:logging/logging.dart';
+import 'package:reband_restful/reband_restful.dart' as reband;
+import 'package:source_gen/source_gen.dart';
+
+// const _parametersVar = '\$params';
+// const _headersVar = '\$headers';
+// const _requestVar = '\$request';
+// const _bodyVar = '\$body';
+// const _partsVar = '\$parts';
+// const _urlVar = '\$url';
+
+/// Read all informations from annotations and annotating elements, then
+/// generate implementation code for all well annotated abstract methods
+/// in a concrete class.
+class RebandServiceGenerator
+    extends GeneratorForAnnotation<reband.RESTfulApis> {
+  /// Field name of annotation [reband.RESTfulApis].
+  // static const _afn0 = ;
+
+  /// Generated field name for instance of [reband.Reband] type, which expected
+  /// to get from [reband.RebandService]'s type argument.
+  static const _gfnReband = r'_reband$';
+
+  /// Generated variable name for path [Map] in function local.
+  static const _gvnPathMap = r'composedPath$';
+
+  static const _gvnQueryMap = r'composedQuery$';
+  static const _gvnHeaderMap = r'composedHeader$';
+  static const _gvnFieldMap = r'composedField$';
+  static const _gvnPartList = r'composedPart$';
+  static const _gvnBodyList = r'composedBody$';
+
+  static const _ignore = '// ignore_for_file: equal_keys_in_map';
+
+  late final _logger = Logger('Reband.ServiceGenerator');
+
+  late final ClassElement _annotatedClass;
+
+  late final DartType _rebandType;
+
+  late final DartType _replyType;
+
+  late final String _basePath;
+
+  @override
+  FutureOr<String> generateForAnnotatedElement(
+    Element element,
+    ConstantReader annotation,
+    BuildStep buildStep,
+  ) {
+    // The definition of ClassElement from analyzer is a little broad,
+    // it includes not only class in general(concrete or abstract),
+    // but also mixin(or mixin application) and enum class, which are
+    // special kind of class too.
+    //
+    // Marked class by RESTfulApi annotation will be used as a super-class
+    // for the generated sub-class only with the keyword `extends`,
+    // so we should filter out enum, mixin and mixin application.
+    if (element is! ClassElement ||
+        !element.isAbstract ||
+        element.isEnum ||
+        element.isMixin ||
+        element.isMixinApplication) {
+      throw InvalidGenerationSourceError(
+          'RESTfulApis annotation can not target on ${element.kind.name} `${element.displayName}`(enum, mixin and mixin application, these special kind of classes are illegal too)! ONLY ABSTRACT CLASS are supported.');
+    }
+
+    final rebandServiceTc = _getCheckerOf(reband.RebandService);
+    try {
+      final rebandServiceType = element.allSupertypes
+          .firstWhere(rebandServiceTc.isAssignableFromType);
+      _rebandType =
+          _getRecursivelyUntilItsExactly(rebandServiceType, rebandServiceTc)
+              .typeArguments[0]; // RebandService has only one type argument.
+    } catch (_) {
+      throw InvalidGenerationSourceError(
+          '`${element.displayName}` MUST directly or indirectly inherited from `RebandService` by `extends`, `implements` or `with`!');
+    }
+
+    final rebandTc = _getCheckerOf(reband.Reband);
+    if (rebandTc.isExactlyType(_rebandType)) {
+      throw InvalidGenerationSourceError(
+          'Avoid using `Reband` as type parameter for `RebandService`, replace `Reband` with one of it\'s sub-class that you have implemented.');
+    }
+    try {
+      final rebandType = (_rebandType as InterfaceType)
+          .allSupertypes
+          .firstWhere(rebandTc.isAssignableFromType);
+      _replyType = _getRecursivelyUntilItsExactly(rebandType, rebandTc)
+          .typeArguments[2]; // Reply type arg is at index 2 of Reband.
+    } catch (e) {
+      rethrow;
+    }
+
+    _basePath = annotation.peek('basePath')?.stringValue ?? '';
+
+    _annotatedClass = element;
+
+    return _generateImplementationClassFormattedString();
+  }
+
+  final _typeCheckerMap = <Type, TypeChecker>{};
+  TypeChecker _getCheckerOf(Type type) =>
+      _typeCheckerMap.putIfAbsent(type, () => TypeChecker.fromRuntime(type));
+
+  InterfaceType _getRecursivelyUntilItsExactly(
+      InterfaceType type, TypeChecker byChecker) {
+    if (byChecker.isExactlyType(type)) return type;
+
+    final superType =
+        type.allSupertypes.firstWhere(byChecker.isAssignableFromType);
+
+    return _getRecursivelyUntilItsExactly(superType, byChecker);
+  }
+
+  String _generateImplementationClassFormattedString() {
+    final classBuilder = Class((builder) => builder
+      ..name = '_\$${_annotatedClass.name}'
+      ..extend = refer(_annotatedClass.name)
+      ..fields.add(_buildRebandFiled())
+      ..constructors.add(_buildConstructor())
+      ..methods.addAll(_verifyAllMethodsCorrectnessAndBuild()));
+
+    return DartFormatter().format('$_ignore\n'
+        '${classBuilder.accept(DartEmitter())}');
+  }
+
+  Field _buildRebandFiled() => Field((builder) => builder
+    ..name = _gfnReband
+    ..type = refer((_rebandType).toString())
+    ..modifier = FieldModifier.final$);
+
+  Constructor _buildConstructor() => Constructor((builder) => builder
+    ..requiredParameters.add(
+      Parameter((paramBuilder) => paramBuilder
+        ..name = _gfnReband
+        ..toThis = true),
+    ));
+
+  Iterable<Method> _verifyAllMethodsCorrectnessAndBuild() {
+    final targetMethods = <ConstantReader, MethodElement>{};
+    // TODO: check whether methods from mixins will be listed or not?
+    _annotatedClass.methods.forEach((method) {
+      if (method.isAbstract) {
+        final returnType = method.returnType;
+        if (!returnType.isDartAsyncFuture) {
+          throw InvalidGenerationSourceError(
+              'The return type of abstract method `${method.name}` in `${_annotatedClass.name}` is not `Future`!');
+        }
+
+        final futureTypeArg =
+            (returnType as ParameterizedType).typeArguments[0];
+        if (futureTypeArg != _replyType) {
+          throw InvalidGenerationSourceError(
+              'The `Future` type argument of abstract method `${method.name}` in `${_annotatedClass.name}` should be same with the one passed by `RebandService`!');
+        }
+
+        final hmAnnCr = _getAnnotationCr(method, reband.HttpMethod);
+        if (hmAnnCr.isNull) {
+          throw InvalidGenerationSourceError(
+              'Abstract method `${method.name}` in `${_annotatedClass.name}` dose not have any specific http method annotation targeted on!');
+        } else {
+          targetMethods[hmAnnCr] = method;
+        }
+      }
+      // Skip all methods we should not care about.
+    });
+
+    return targetMethods.entries.map((e) => _buildMethod(e.key, e.value));
+  }
+
+  /// Get annotation of [Type] wrapped in [ConstantReader] from [Element].
+  ConstantReader _getAnnotationCr(Element fromEle, Type ofType) =>
+      ConstantReader(_getAnnotationDo(fromEle, ofType));
+
+  DartObject? _getAnnotationDo(Element fromEle, Type ofType) =>
+      _getCheckerOf(ofType)
+          .firstAnnotationOf(fromEle, throwOnUnresolved: false);
+
+  Method _buildMethod(ConstantReader httpMethodAnnCr, MethodElement mEle) {
+    // _logger.info('mEle.toString(): ${mEle.toString()}');
+    // _logger.info('mEle.name: ${mEle.name}');
+    // _logger.info('mEle.displayName: ${mEle.displayName}');
+    // _logger.info('mEle.getDisplayString: '
+    //     '${mEle.getDisplayString(withNullability: false)}');
+    //   final method = _getMethodAnnotation(m);
+
+    final pathReferMap = <Expression, Reference>{};
+    final queryMapSb = StringBuffer('<String, dynamic>')..writeln('{');
+    final headerMapSb = StringBuffer('<String, String>')..writeln('{');
+    final fieldMapSb = StringBuffer('<String, dynamic>')..writeln('{');
+    final multipartLis = <Expression>[];
+    final bodyReferLis = <Reference>[];
+
+    final headerMapCr = _getAnnotationCr(mEle, reband.HeaderMap);
+    if (!headerMapCr.isNull) {
+      headerMapCr.read('value').mapValue.forEach((key, value) {
+        final keyStr = key?.toStringValue() ?? '';
+        final valueStr = value?.toStringValue() ?? '';
+        headerMapSb.writeln('\'$keyStr\': \'$valueStr\',');
+      });
+    }
+
+    // final isMultipart = _isAnnotating(mEle, reband.Multipart);
+
+    final mbRequiredParams = <Parameter>[];
+    final mbOptionalParams = <Parameter>[];
+
+    for (final pe in mEle.parameters) {
+      if (pe.isNotOptional) {
+        mbRequiredParams.add(_buildParameter(pe));
+      } else {
+        mbOptionalParams.add(_buildParameter(pe));
+      }
+
+      if (pe.metadata.isEmpty) {
+        _logger.warning(
+            'Parameter `${pe.name}` does not have any annotation, means useless in generated code, conside remove or add an annotation on it.');
+        continue; // skip for faster
+      }
+
+      _readAnnPath(pe, pathReferMap);
+      _readAnnQuery(pe, queryMapSb);
+      _readAnnHeader(pe, headerMapSb);
+      _readAnnField(pe, fieldMapSb);
+      _readAnnPart(pe, multipartLis);
+      _readAnnBody(pe, bodyReferLis);
+    }
+
+    final methodBodyCodes = <Code>[];
+
+    final executeNamedArgs = <String, Expression>{};
+
+    if (pathReferMap.isNotEmpty) {
+      methodBodyCodes.add(literalMap(
+        pathReferMap,
+        refer((String).toString()),
+        refer((dynamic).toString()),
+      ).assignFinal(_gvnPathMap).statement);
+
+      executeNamedArgs['pathMapper'] = refer(_gvnPathMap);
+    }
+
+    if (queryMapSb.length > 19) {
+      queryMapSb.writeln('};');
+      methodBodyCodes.add(Code('final $_gvnQueryMap = $queryMapSb'));
+
+      executeNamedArgs['queries'] = refer(_gvnQueryMap);
+    }
+
+    if (headerMapSb.length > 18) {
+      headerMapSb.writeln('};');
+      methodBodyCodes.add(Code('final $_gvnHeaderMap = $headerMapSb'));
+
+      executeNamedArgs['headers'] = refer(_gvnHeaderMap);
+    }
+
+    if (fieldMapSb.length > 19) {
+      fieldMapSb.writeln('};');
+      methodBodyCodes.add(Code('final $_gvnFieldMap = $fieldMapSb'));
+
+      executeNamedArgs['fields'] = refer(_gvnFieldMap);
+    }
+
+    if (multipartLis.isNotEmpty) {
+      methodBodyCodes.add(literalList(
+        multipartLis,
+        refer((reband.Multipart).toString()),
+      ).assignFinal(_gvnPartList).statement);
+
+      executeNamedArgs['multiparts'] = refer(_gvnPartList);
+    }
+
+    if (bodyReferLis.isNotEmpty) {
+      methodBodyCodes.add(literalList(
+        bodyReferLis,
+        refer((dynamic).toString()),
+      ).assignFinal(_gvnBodyList).statement);
+
+      executeNamedArgs['annBodies'] = refer(_gvnBodyList);
+    }
+
+    final hmName = httpMethodAnnCr.peek('name')?.stringValue ?? '';
+    final endPath = httpMethodAnnCr.peek('endPath')?.stringValue ?? '';
+    final executeCallCode = refer('$_gfnReband.execute')
+        .call([
+          literalString(hmName),
+          literalString(_basePath),
+          literalString(endPath)
+        ], executeNamedArgs)
+        .returned
+        .statement;
+
+    methodBodyCodes.add(executeCallCode);
+
+    return Method((methodBuilder) {
+      // final a = mEle.typeParameters;
+      // _logger.info('typeParameters of method($mEle): $a');
+      methodBuilder
+        ..annotations.add(refer('override'))
+        ..name = mEle.displayName
+        ..types.addAll(
+          mEle.typeParameters.map((tpe) => Reference(tpe.name)),
+        )
+        ..returns = Reference(
+          mEle.returnType.getDisplayString(
+            withNullability: mEle.returnType.isNullable,
+          ),
+        )
+        ..requiredParameters.addAll(mbRequiredParams)
+        ..optionalParameters.addAll(mbOptionalParams)
+        ..body = Block.of(methodBodyCodes);
+    });
+  }
+
+  bool _isAnnotating(Element onEle, Type withType) =>
+      _getAnnotationDo(onEle, withType) != null;
+
+  // Named params can be optional or required, they also need to support
+  // nullability
+  Parameter _buildParameter(ParameterElement fromPe) => Parameter((builder) {
+        builder
+          ..name = fromPe.name
+          ..named = fromPe.isNamed
+          ..required = fromPe.isRequiredNamed
+          ..covariant = fromPe.isCovariant
+          ..type = Reference(
+            fromPe.type.getDisplayString(
+              withNullability: fromPe.type.isNullable,
+            ),
+          );
+
+        final defaultValueStr = fromPe.defaultValueCode;
+        if (defaultValueStr != null) {
+          builder.defaultTo = Code(defaultValueStr);
+        }
+      });
+
+  void _readAnnPath(ParameterElement pe, Map<Expression, Reference> map) {
+    final pathAnnCr = _getAnnotationCr(pe, reband.Path);
+    if (!pathAnnCr.isNull) {
+      final name = pathAnnCr.peek('name')?.stringValue ?? pe.name;
+      map[literalString(name)] = refer(pe.name);
+    }
+  }
+
+  void _readAnnQuery(ParameterElement pe, StringBuffer codeStrBuffer) {
+    final queriesAnnCr = _getAnnotationCr(pe, reband.Queries);
+    if (!queriesAnnCr.isNull) {
+      _checkParamMapTypeAndSpreadIt(pe, codeStrBuffer, 'Queries');
+    }
+    final queryAnnCr = _getAnnotationCr(pe, reband.Query);
+    if (!queryAnnCr.isNull) {
+      final name = queryAnnCr.peek('name')?.stringValue ?? pe.name;
+      codeStrBuffer.writeln('\'$name\': ${pe.name},');
+    }
+  }
+
+  void _readAnnHeader(ParameterElement pe, StringBuffer codeStrBuffer) {
+    final headersAnnCr = _getAnnotationCr(pe, reband.Headers);
+    if (!headersAnnCr.isNull) {
+      _checkParamMapTypeAndSpreadIt(pe, codeStrBuffer, 'Headers',
+          valueType: 'String');
+    }
+    final headerAnnCr = _getAnnotationCr(pe, reband.Header);
+    if (!headerAnnCr.isNull) {
+      final name = headerAnnCr.peek('name')?.stringValue ?? pe.name;
+      codeStrBuffer.writeln('\'$name\': ${pe.name}.toString(),');
+    }
+  }
+
+  void _readAnnField(ParameterElement pe, StringBuffer codeStrBuffer) {
+    final fieldsAnnCr = _getAnnotationCr(pe, reband.Fields);
+    if (!fieldsAnnCr.isNull) {
+      _checkParamMapTypeAndSpreadIt(pe, codeStrBuffer, 'Fields');
+    }
+    final fieldAnnCr = _getAnnotationCr(pe, reband.Field);
+    if (!fieldAnnCr.isNull) {
+      final name = fieldAnnCr.peek('name')?.stringValue ?? pe.name;
+      codeStrBuffer.writeln('\'$name\': ${pe.name},');
+    }
+  }
+
+  void _readAnnPart(ParameterElement pe, List<Expression> list) {
+    final partAnnCr = _getAnnotationCr(pe, reband.Part);
+    if (!partAnnCr.isNull) {
+      final name = partAnnCr.peek('name')?.stringValue ?? pe.name;
+      final namedArgs = <String, Expression>{};
+      final fileName = partAnnCr.peek('fileName')?.stringValue;
+      if (fileName != null) {
+        namedArgs['fileName'] = literalString(fileName);
+      }
+      final isFilePath = partAnnCr.read('isFilePath').boolValue;
+      if (isFilePath) {
+        namedArgs['isValuePath'] = literalBool(isFilePath);
+      }
+
+      list.add(refer((reband.Multipart).toString()).newInstance([
+        literalString(name),
+        refer(pe.name),
+      ], namedArgs));
+    }
+  }
+
+  void _readAnnBody(ParameterElement pe, List<Reference> list) {
+    final bodyAnnCr = _getAnnotationCr(pe, reband.Body);
+    if (!bodyAnnCr.isNull) list.add(refer(pe.name));
+  }
+
+  void _checkParamMapTypeAndSpreadIt(
+    ParameterElement paramElem,
+    StringBuffer codeStrBuffer,
+    String annNameForLogger, {
+    String keyType = 'String',
+    String valueType = 'dynamic',
+  }) {
+    final typeDisplay = paramElem.type.getDisplayString(
+      withNullability: paramElem.type.isNullable,
+    );
+    // _logger.info('parameter type: $typeDisplayStr');
+    if (typeDisplay.startsWith('Map<$keyType, $valueType>')) {
+      final String spreadCode;
+      if (paramElem.type.isNullable) {
+        spreadCode = '...?${paramElem.name},';
+      } else {
+        spreadCode = '...${paramElem.name},';
+      }
+      codeStrBuffer.writeln(spreadCode);
+    } else {
+      _logger.severe('`$annNameForLogger` annotations should only'
+          ' target on `Map<$keyType, $valueType>` type parameter,'
+          ' and `${paramElem.name}` is not a valid map!');
+    }
+  }
+}
+
+bool getMethodOptionalBody(ConstantReader method) =>
+    method.read('optionalBody').boolValue;
+
+String getMethodPath(ConstantReader method) => method.read('path').stringValue;
+
+String getMethodName(ConstantReader method) =>
+    method.read('method').stringValue;
+
+extension DartTypeExtension on DartType {
+  bool get isNullable => nullabilitySuffix != NullabilitySuffix.none;
+}

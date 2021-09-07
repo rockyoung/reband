@@ -1,0 +1,16 @@
+name: reband_restful
+description: A gift for dart world to use all http libraries consistently.
+version: 1.0.0
+homepage: https://github.com/rockyoung/reband
+repository: https://github.com/rockyoung/reband/blob/main/restful
+
+environment:
+  sdk: '>=2.12.0 <3.0.0'
+
+dependencies:
+  meta: ^1.7.0
+  logging: ^1.0.1
+
+dev_dependencies:
+  pedantic: ^1.11.1
+  test: ^1.17.10
