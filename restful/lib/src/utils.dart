@@ -53,7 +53,7 @@ Uri buildHttpUriFrom(
   final Map<String, dynamic>? appendQueries,
 }) {
   pathReplaces?.forEach((key, value) {
-    httpUrl = httpUrl.replaceAll('/{$key}/', '/$value/');
+    httpUrl = httpUrl.replaceAll('{$key}', '$value');
   });
 
   final uri = Uri.tryParse(httpUrl);

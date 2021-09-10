@@ -1,6 +1,5 @@
 /// @nodoc
 import 'dart:async';
-// import 'dart:html';
 
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
@@ -9,28 +8,17 @@ import 'package:analyzer/dart/element/type.dart';
 
 import 'package:build/build.dart';
 import 'package:build/src/builder/build_step.dart';
-import 'package:built_collection/built_collection.dart';
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:logging/logging.dart';
 import 'package:reband_restful/reband_restful.dart' as reband;
 import 'package:source_gen/source_gen.dart';
 
-// const _parametersVar = '\$params';
-// const _headersVar = '\$headers';
-// const _requestVar = '\$request';
-// const _bodyVar = '\$body';
-// const _partsVar = '\$parts';
-// const _urlVar = '\$url';
-
 /// Read all informations from annotations and annotating elements, then
 /// generate implementation code for all well annotated abstract methods
 /// in a concrete class.
 class RebandServiceGenerator
     extends GeneratorForAnnotation<reband.RESTfulApis> {
-  /// Field name of annotation [reband.RESTfulApis].
-  // static const _afn0 = ;
-
   /// Generated field name for instance of [reband.Reband] type, which expected
   /// to get from [reband.RebandService]'s type argument.
   static const _gfnReband = r'_reband$';
@@ -183,10 +171,17 @@ class RebandServiceGenerator
     return targetMethods.entries.map((e) => _buildMethod(e.key, e.value));
   }
 
-  /// Get annotation of [Type] wrapped in [ConstantReader] from [Element].
+  // bool _isAnnotating(Element onEle, Type withType) =>
+  //     _getAnnotationDo(onEle, withType) != null;
+
+  /// Get annotation of [Type] wrapped in [ConstantReader] from [Element], May
+  /// return `_NullConstant` and should check it by [ConstantReader.isNull].
   ConstantReader _getAnnotationCr(Element fromEle, Type ofType) =>
       ConstantReader(_getAnnotationDo(fromEle, ofType));
 
+  /// Returns the first constant annotating [fromEle] assignable to [ofType].
+  /// Otherwise returns null. see [TypeChecker.firstAnnotationOf] for more
+  /// details.
   DartObject? _getAnnotationDo(Element fromEle, Type ofType) =>
       _getCheckerOf(ofType)
           .firstAnnotationOf(fromEle, throwOnUnresolved: false);
@@ -214,8 +209,6 @@ class RebandServiceGenerator
         headerMapSb.writeln('\'$keyStr\': \'$valueStr\',');
       });
     }
-
-    // final isMultipart = _isAnnotating(mEle, reband.Multipart);
 
     final mbRequiredParams = <Parameter>[];
     final mbOptionalParams = <Parameter>[];
@@ -314,9 +307,9 @@ class RebandServiceGenerator
         ..annotations.add(refer('override'))
         ..name = mEle.displayName
         ..types.addAll(
-          mEle.typeParameters.map((tpe) => Reference(tpe.name)),
+          mEle.typeParameters.map((tpe) => refer(tpe.name)),
         )
-        ..returns = Reference(
+        ..returns = refer(
           mEle.returnType.getDisplayString(
             withNullability: mEle.returnType.isNullable,
           ),
@@ -327,18 +320,13 @@ class RebandServiceGenerator
     });
   }
 
-  bool _isAnnotating(Element onEle, Type withType) =>
-      _getAnnotationDo(onEle, withType) != null;
-
-  // Named params can be optional or required, they also need to support
-  // nullability
   Parameter _buildParameter(ParameterElement fromPe) => Parameter((builder) {
         builder
           ..name = fromPe.name
           ..named = fromPe.isNamed
           ..required = fromPe.isRequiredNamed
           ..covariant = fromPe.isCovariant
-          ..type = Reference(
+          ..type = refer(
             fromPe.type.getDisplayString(
               withNullability: fromPe.type.isNullable,
             ),
@@ -378,7 +366,7 @@ class RebandServiceGenerator
     }
     final headerAnnCr = _getAnnotationCr(pe, reband.Header);
     if (!headerAnnCr.isNull) {
-      final name = headerAnnCr.peek('name')?.stringValue ?? pe.name;
+      final name = headerAnnCr.read('name').stringValue;
       codeStrBuffer.writeln('\'$name\': ${pe.name}.toString(),');
     }
   }
@@ -406,7 +394,7 @@ class RebandServiceGenerator
       }
       final isFilePath = partAnnCr.read('isFilePath').boolValue;
       if (isFilePath) {
-        namedArgs['isValuePath'] = literalBool(isFilePath);
+        namedArgs['valueIsPath'] = literalBool(isFilePath);
       }
 
       list.add(refer((reband.Multipart).toString()).newInstance([
@@ -431,7 +419,7 @@ class RebandServiceGenerator
     final typeDisplay = paramElem.type.getDisplayString(
       withNullability: paramElem.type.isNullable,
     );
-    // _logger.info('parameter type: $typeDisplayStr');
+
     if (typeDisplay.startsWith('Map<$keyType, $valueType>')) {
       final String spreadCode;
       if (paramElem.type.isNullable) {
@@ -447,14 +435,6 @@ class RebandServiceGenerator
     }
   }
 }
-
-bool getMethodOptionalBody(ConstantReader method) =>
-    method.read('optionalBody').boolValue;
-
-String getMethodPath(ConstantReader method) => method.read('path').stringValue;
-
-String getMethodName(ConstantReader method) =>
-    method.read('method').stringValue;
 
 extension DartTypeExtension on DartType {
   bool get isNullable => nullabilitySuffix != NullabilitySuffix.none;

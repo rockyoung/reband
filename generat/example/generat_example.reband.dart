@@ -27,15 +27,21 @@ class _$MyService extends MyService {
   }
 
   @override
-  Future<FakeReply> postByHeaderField(String h0, Map<String, String> hs0,
-      int h1, bool xxx, dynamic f0, Map<String, dynamic> fs0, dynamic f1) {
+  Future<FakeReply> postByHeaderField(
+      Uri h0,
+      dynamic h1,
+      Map<String, String> hs0,
+      String h2,
+      dynamic f0,
+      Map<String, dynamic> fs0,
+      dynamic f1) {
     final composedHeader$ = <String, String>{
-      'xxx': 'yyy',
-      'zzz': 'non',
-      'wow': h0.toString(),
+      'X-Foo': 'Bar',
+      'X-Ping': 'Pang',
+      'Origin': h0.toString(),
+      'Cookie': h1.toString(),
       ...hs0,
-      'h1': h1.toString(),
-      'xxx': xxx.toString(),
+      'Accept': h2.toString(),
     };
 
     final composedField$ = <String, dynamic>{

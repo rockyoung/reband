@@ -21,14 +21,14 @@ abstract class MyService with RebandService<FakeReband> {
 
   @POST('commit')
   @HeaderMap({
-    'xxx': 'yyy',
-    'zzz': 'non',
+    'X-Foo': 'Bar',
+    'X-Ping': 'Pang',
   })
   Future<FakeReply> postByHeaderField(
-    @Header('wow') String h0,
+    @Header('Origin') Uri h0,
+    @Header('Cookie') dynamic h1,
     @headers Map<String, String> hs0,
-    @header int h1,
-    @header bool xxx,
+    @Header('Accept') String h2,
     @Field('fn0') f0,
     @fields Map<String, dynamic> fs0,
     @field f1,
