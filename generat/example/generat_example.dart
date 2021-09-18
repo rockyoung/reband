@@ -30,7 +30,7 @@ abstract class MyService with RebandService<FakeReband> {
     @headers Map<String, String> hs0,
     @Header('Accept') String h2,
     @Field('fn0') f0,
-    @fields Map<String, dynamic> fs0,
+    @fields Map<String, dynamic>? fs0,
     @field f1,
   );
 

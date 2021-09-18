@@ -102,7 +102,9 @@ class OPTIONS extends HttpMethod {
 }
 
 /// Constant [GET] annotation with default empty 'path'.
+// ignore: constant_identifier_names
 const Get = GET();
 
 /// Constant [POST] annotation with default empty 'path'.
+// ignore: constant_identifier_names
 const Post = POST();

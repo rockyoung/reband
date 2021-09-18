@@ -1,9 +1,8 @@
 import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
 
-/// Package scoped logger.
 @internal
-final rebandLogger = Logger('Reband.P_RESTful');
+final rebandLogger = Logger('reband_restful');
 
 /// Note: Do not use this function with `non-http` url and path!
 ///
@@ -36,7 +35,9 @@ String combineHttpUrl(String baseUrl, String path) {
 ///
 /// The processing for the `dynamic` type value of two maps will be slightly
 /// different:
-///  - for [pathReplaces], all value will be converted to `String` simply;
+///  - for [pathReplaces], all same `{key}` presents will be replaced with
+/// their corresponding values by convert them to `String` for [httpUrl], and
+/// the replacement happens before uri parsing and queries appending;
 ///  - for [appendQueries], if value is `Iterable` type, it will be converted
 /// to `Iterable<String>` by mapping each item with `toString()` call, while
 /// all other types will be converted to `String` by `toString()` too, cause

@@ -1,17 +1,28 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:http/http.dart';
 import 'package:reband_restful/reband_restful.dart';
 
-class HttpReply extends Reply<BaseResponse> {
-  static int _onGetStatusCode(BaseResponse raw) => raw.statusCode;
-  static Map<String, String> _onGetHeaders(BaseResponse raw) =>
-      Map.unmodifiable(raw.headers);
-  static dynamic _onGetBody(BaseResponse raw) {
-    if (raw is Response) {
-      return raw.body;
-    }
-    return null;
-  }
+class HttpReply extends Reply<StreamedResponse> {
+  @override
+  int get statusCode => rawResponse.statusCode;
 
-  HttpReply(BaseResponse rawResponse)
-      : super(rawResponse, _onGetStatusCode, _onGetHeaders, _onGetBody);
+  @override
+  String? get message => rawResponse.reasonPhrase;
+
+  @override
+  Map<String, String> get headers => Map.unmodifiable(rawResponse.headers);
+
+  @override
+  ByteStream get bodyStream => rawResponse.stream;
+
+  late final FutureOr<Response> response = Response.fromStream(rawResponse);
+
+  FutureOr<Uint8List> get bodyBytes async => (await response).bodyBytes;
+
+  FutureOr<String> get bodyString async => (await response).body;
+
+  HttpReply(StreamedResponse rawResponse, int timeConsuming)
+      : super(rawResponse, timeConsuming);
 }

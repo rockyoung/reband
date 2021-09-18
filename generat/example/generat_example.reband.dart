@@ -33,7 +33,7 @@ class _$MyService extends MyService {
       Map<String, String> hs0,
       String h2,
       dynamic f0,
-      Map<String, dynamic> fs0,
+      Map<String, dynamic>? fs0,
       dynamic f1) {
     final composedHeader$ = <String, String>{
       'X-Foo': 'Bar',
@@ -46,7 +46,7 @@ class _$MyService extends MyService {
 
     final composedField$ = <String, dynamic>{
       'fn0': f0,
-      ...fs0,
+      ...?fs0,
       'f1': f1,
     };
 
@@ -60,10 +60,10 @@ class _$MyService extends MyService {
     final composedPart$ = <Multipart>[
       Multipart('ptfn0', pt0),
       Multipart('pt1', pt1),
-      Multipart('imgPath', imgPath, fileName: 'avatar.jpg', isValuePath: true),
+      Multipart('imgPath', imgPath, fileName: 'avatar.jpg', valueIsPath: true),
       Multipart('myProfile', profiles),
       Multipart('binary', binary, fileName: 'moment.png'),
-      Multipart('mySignature', mySignature, isValuePath: true)
+      Multipart('mySignature', mySignature, valueIsPath: true)
     ];
     return _reband$.execute('PUT', 'user/', 'create',
         multiparts: composedPart$);

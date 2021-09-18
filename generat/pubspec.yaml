@@ -12,13 +12,13 @@ dependencies:
   code_builder: ^4.1.0
   # dart_style: ^2.0.3
   source_gen: ^1.1.0
-  logging: ^1.0.1
   reband_restful:
 
 # For `example` and `test`
 dev_dependencies:
   build_runner: ^2.1.1
-  test: ^1.17.10
+  lints: ^1.0.1
+  test: ^1.17.12
 
 dependency_overrides:
   # Comment before publish

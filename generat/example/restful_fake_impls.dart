@@ -1,5 +1,5 @@
-// Fake implementations of reband_restful interfaces for example to the
-// generat_example.dart.
+/// Fake implementations of `reband_restful` library just for the example to
+/// generat_example.dart.
 
 import 'package:reband_restful/reband_restful.dart';
 
@@ -10,46 +10,38 @@ class FakeResponse {}
 class FakeClient {}
 
 class FakeApply extends Apply<FakeRequest> {
-  const FakeApply(
-    this.method,
-    this.uri, {
-    Map<String, String>? headers,
-    this.body,
-  }) : headers = headers ?? Apply.emptyHeaders;
+  const FakeApply();
 
   @override
-  final String method;
+  String get method => 'GET';
 
   @override
-  final Uri uri;
+  Uri get uri => Uri();
 
   @override
-  final Map<String, String> headers;
+  Map<String, String> get headers => Apply.emptyHeaders;
 
   @override
-  final dynamic body;
+  dynamic get body => null;
 
   @override
-  FakeApply clone({
-    String? method,
-    Uri? uri,
-    Map<String, String>? headers,
-    dynamic body,
-  }) =>
-      FakeApply(
-        method ?? this.method,
-        uri ?? this.uri,
-        headers: headers ?? this.headers,
-        body: body ?? this.body,
-      );
-
-  @override
-  FakeRequest submit() => FakeRequest();
+  Future<FakeRequest> submit() async => FakeRequest();
 }
 
 class FakeReply extends Reply<FakeResponse> {
-  FakeReply(FakeResponse rawResponse)
-      : super(rawResponse, (_) => 0, (_) => <String, String>{}, (_) => null);
+  FakeReply(FakeResponse rawResponse) : super(rawResponse, 100);
+
+  @override
+  Stream<List<int>> get bodyStream => Stream.empty();
+
+  @override
+  Map<String, String> get headers => {};
+
+  @override
+  String? get message => 'OK';
+
+  @override
+  int get statusCode => 200;
 }
 
 class FakeReband extends Reband<FakeClient, FakeApply, FakeReply> {
@@ -58,11 +50,11 @@ class FakeReband extends Reband<FakeClient, FakeApply, FakeReply> {
   @override
   FakeApply buildApply(String method, Uri uri,
           {Map<String, String>? headers, dynamic body}) =>
-      FakeApply(method, uri, headers: headers, body: body);
+      FakeApply();
 
   @override
   Future<FakeReply> launch(FakeApply apply) async {
-    // final fakeRequest = apply.fill();
+    // final fakeRequest = await apply.submit();
     // final fakeResponse = await engine.send(fakeRequest);
     return FakeReply(FakeResponse());
   }

@@ -12,10 +12,16 @@ class HttpReband extends Reband<Client, HttpApply, HttpReply> {
           {Map<String, String>? headers, dynamic body}) =>
       HttpApply(method, uri, headers: headers, body: body);
 
+  // @override
+  // Future<HttpReply> launch(HttpApply apply) async =>
+  //     HttpReply(await engine.send(await apply.submit()));
+
   @override
   Future<HttpReply> launch(HttpApply apply) async {
-    final streamedResponse = await engine.send(apply.submit());
-    final response = await Response.fromStream(streamedResponse);
-    return HttpReply(response);
+    final request = await apply.submit();
+    final startMs = DateTime.now().millisecondsSinceEpoch;
+    final response = await engine.send(request);
+    final timeConsuming = DateTime.now().millisecondsSinceEpoch - startMs;
+    return HttpReply(response, timeConsuming);
   }
 }

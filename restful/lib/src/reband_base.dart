@@ -25,12 +25,11 @@ abstract class Reband<E, A extends Apply, R extends Reply> {
 
   @nonVirtual
   void _setInterveners(List<Intervener>? interveners) {
-    rebandLogger.config(interveners);
     if (interveners == null || interveners.isEmpty) {
       return;
     }
 
-    interveners.forEach((intervener) {
+    for (final intervener in interveners) {
       var isAcceptable = false;
       if (intervener is ApplyIntervener<A>) {
         isAcceptable = true;
@@ -44,7 +43,7 @@ abstract class Reband<E, A extends Apply, R extends Reply> {
         rebandLogger.warning(
             'You are passing `Intervener` which is neither an ApplyIntervener nor a ReplyIntervener, it will be ignored by simply dropping!');
       }
-    });
+    }
   }
 
   Future<A> _interveneApply(A apply) async {
@@ -98,10 +97,9 @@ abstract class Reband<E, A extends Apply, R extends Reply> {
   @protected
   Uri buildApplyUri(String basePath, String endPath,
       Map<String, dynamic>? pathMapper, Map<String, dynamic>? queries) {
-    var fullUrl = combineHttpUrl(baseUrl, basePath);
-    fullUrl = combineHttpUrl(fullUrl, endPath);
+    final fullUrl = combineHttpUrl(baseUrl, basePath);
     return buildHttpUriFrom(
-      fullUrl,
+      combineHttpUrl(fullUrl, endPath),
       pathReplaces: pathMapper,
       appendQueries: queries,
     );
@@ -130,7 +128,7 @@ abstract class Reband<E, A extends Apply, R extends Reply> {
   A buildApply(String method, Uri uri,
       {Map<String, String>? headers, dynamic body});
 
-  /// Building the real request(by [Apply.submit]) and sending it through the
+  /// Building the real request (by [Apply.submit]) and sending it through the
   /// [engine] client, await the real response to build corresponding [Reply]
   /// for return.
   @protected

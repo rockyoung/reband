@@ -7,7 +7,6 @@ import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import 'package:build/build.dart';
-import 'package:build/src/builder/build_step.dart';
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:logging/logging.dart';
@@ -34,7 +33,7 @@ class RebandServiceGenerator
 
   static const _ignore = '// ignore_for_file: equal_keys_in_map';
 
-  late final _logger = Logger('Reband.ServiceGenerator');
+  late final _logger = Logger('reband_generat.service');
 
   late final ClassElement _annotatedClass;
 
@@ -141,8 +140,8 @@ class RebandServiceGenerator
 
   Iterable<Method> _verifyAllMethodsCorrectnessAndBuild() {
     final targetMethods = <ConstantReader, MethodElement>{};
-    // TODO: check whether methods from mixins will be listed or not?
-    _annotatedClass.methods.forEach((method) {
+
+    for (final method in _annotatedClass.methods) {
       if (method.isAbstract) {
         final returnType = method.returnType;
         if (!returnType.isDartAsyncFuture) {
@@ -166,7 +165,7 @@ class RebandServiceGenerator
         }
       }
       // Skip all methods we should not care about.
-    });
+    }
 
     return targetMethods.entries.map((e) => _buildMethod(e.key, e.value));
   }

@@ -4,6 +4,7 @@
 library reband_http;
 
 export 'src/http_apply.dart';
+export 'src/http_logger.dart';
 export 'src/http_reply.dart';
 export 'src/http_reband.dart';
 
