@@ -1,29 +1,62 @@
 import 'package:meta/meta.dart';
 import 'package:meta/meta_meta.dart';
-import '../multipart.dart';
 import '../reband_base.dart';
-import '../reband_type.dart';
+import '../multipart.dart';
 
-/// Core annotation to make library reband_generat begin to work.
+/// {@template RESTfulApis.document}
+/// Core annotation use to define a set of RESTful API requests, the annotated
+/// abstract class should be treated as pure API `Interface`, which can help
+/// you only focus on the definition part of network service, and the library
+/// `reband_generat` will do all the rest implementation work for you.
+///
+/// The optional [basePath] parameter can help to extract the common part of
+/// path from all requests defined inside the same class, it is the original
+/// intention for the parameter, but you can use it as a 'baseUrl' too which
+/// will override the value set in [Reband.baseUrl].
+///
+/// Example of use:
+/// ```dart
+/// @RESTfulApis(basePath: '/todo')
+/// abstract class TodoApiService {
+///   @PUT('/create')
+///   Future<Reply> create(@body Todo todo);
+///   // define your other requests...
+/// }
+/// ```
+/// or by indicating your specific `Reband` to return specific `Reply`:
+/// ```dart
+/// const rebandApis = RESTfulApis<MyReband>(basePath: '/todo');
+///
+/// @rebandApis
+/// abstract class TodoApiService1 {
+///   @GET('/{id}')
+///   Future<MyReply> getBy(@path int id);
+///   // define your other requests...
+/// }
+/// ```
+/// and even extend from it to simplify all annotations writing:
+/// ```dart
+/// class MyRESTfulApis extends RESTfulApis<MyReband> {
+///   const MyRESTfulApis(String path) : super(basePath: path);
+/// }
+///
+/// @MyRESTfulApis('/todo')
+/// abstract class TodoApiService2 {
+///   @GET('/{id}')
+///   Future<MyReply> getBy(@path int id);
+///   // define your other requests...
+/// }
+/// ```
+///
+/// **IMPORTANT**: The target class must be abstract, and there cannot be any
+/// concrete method for instance, as `TodoApiService`s in the example code.
+/// {@endtemplate}
 @Target({TargetKind.classType})
-@sealed
-class RESTfulApis {
+class RESTfulApis<T extends Reband> {
   /// An base path that every request defined inside will be prefixed with.
   final String basePath;
 
-  /// Define a RESTful API service with an optional [basePath].
-  ///
-  /// ```dart
-  /// @RESTfulApis(basePath: '/todos')
-  /// abstract class TodoListService with RebandService<MyReband> {
-  ///   // define your requests...
-  /// }
-  /// ```
-  /// ***IMPORTANT***:
-  ///  - target must be an abstract class, as `TodoListService` in the above
-  /// example code;
-  ///  - target must inherited from [RebandService] with a type param which is
-  /// your implementation type of [Reband], no matter what way inherite to.
+  /// {@macro RESTfulApis.document}
   const RESTfulApis({this.basePath = ''});
 }
 

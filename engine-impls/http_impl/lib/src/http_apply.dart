@@ -1,6 +1,8 @@
 import 'package:http/http.dart';
+import 'package:meta/meta.dart';
 import 'package:reband_restful/reband_restful.dart';
 
+@immutable
 class HttpApply extends Apply<BaseRequest> {
   @override
   final String method;
@@ -23,6 +25,10 @@ class HttpApply extends Apply<BaseRequest> {
 
   /// Clone a new apply instance that only replacing the member indicated by
   /// optional named parameter with a non-null value.
+  ///
+  /// *NOTE*: while cloning with a null-body, passing the `'null'` string, or
+  /// `''` (empty string) if you want the null-body be treated as nothing, it
+  /// will not be replaced if you passing `null` for body directly.
   HttpApply clone({
     String? method,
     Uri? uri,

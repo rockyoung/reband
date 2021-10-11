@@ -6,12 +6,12 @@ part 'generat_example.reband.dart';
 
 final myReband = FakeReband('https://api.m3o.com/v1');
 
-@RESTfulApis(basePath: 'user/')
-abstract class MyService with RebandService<FakeReband> {
-  static MyService instance() => _$MyService(myReband);
+@RESTfulApis(basePath: '/my/end/point')
+abstract class MyApiService {
+  factory MyApiService.instance() => _$MyApiService(myReband);
 
   @GET('/{pn0}/{pn1}/profiles')
-  Future<FakeReply> getByPathQuery(
+  Future<Reply> getByPathQuery(
     @Path('phn0') String ph0,
     @path String ph2,
     @Query('qn0') String q0,
@@ -24,7 +24,7 @@ abstract class MyService with RebandService<FakeReband> {
     'X-Foo': 'Bar',
     'X-Ping': 'Pang',
   })
-  Future<FakeReply> postByHeaderField(
+  Future<Reply> postByHeaderField(
     @Header('Origin') Uri h0,
     @Header('Cookie') dynamic h1,
     @headers Map<String, String> hs0,
@@ -35,7 +35,7 @@ abstract class MyService with RebandService<FakeReband> {
   );
 
   @PUT('create')
-  Future<FakeReply> putByMultipart(
+  Future<Reply> putByMultipart(
     @Part(name: 'ptfn0') double pt0,
     @part int pt1,
     @Part(fileName: 'avatar.jpg', isFilePath: true) String imgPath,
@@ -45,8 +45,35 @@ abstract class MyService with RebandService<FakeReband> {
   );
 
   @PATCH('update')
-  Future<FakeReply> patchByBody(
+  Future<Reply> patchByBody(
     @body dynamic b0,
     @body Stream<List<int>> stream,
   );
+}
+
+const rebandApis = RESTfulApis<FakeReband>(basePath: 'work');
+
+@rebandApis
+abstract class WorkApiService {
+  static WorkApiService instance() => _$WorkApiService(myReband);
+
+  @DELETE('/delete/path')
+  Future<FakeReply> delete(@field String workId);
+}
+
+class MyRESTfulApis extends RESTfulApis<FakeReband> {
+  const MyRESTfulApis({String basePath = ''}) : super(basePath: basePath);
+}
+
+@MyRESTfulApis(basePath: 'user')
+abstract class UserApiService {
+  factory UserApiService.create(FakeReband reband) = _$UserApiService;
+
+  @HEAD('head/user')
+  Future<FakeReply> head(@query String userId);
+}
+
+void main() {
+  final myService = MyApiService.instance();
+  // myService.getByPathQuery(ph0, ph2, q0, qs0, q1);
 }

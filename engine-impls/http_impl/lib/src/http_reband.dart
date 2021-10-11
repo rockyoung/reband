@@ -5,7 +5,13 @@ import 'http_apply.dart';
 import 'http_reply.dart';
 
 class HttpReband extends Reband<Client, HttpApply, HttpReply> {
-  HttpReband(Client engine, {String baseUrl = ''}) : super(engine, baseUrl);
+  @override
+  final Client engine;
+
+  @override
+  final String baseUrl;
+
+  HttpReband(this.engine, {this.baseUrl = ''});
 
   @override
   HttpApply buildApply(String method, Uri uri,
@@ -21,7 +27,7 @@ class HttpReband extends Reband<Client, HttpApply, HttpReply> {
     final request = await apply.submit();
     final startMs = DateTime.now().millisecondsSinceEpoch;
     final response = await engine.send(request);
-    final timeConsuming = DateTime.now().millisecondsSinceEpoch - startMs;
-    return HttpReply(response, timeConsuming);
+    final msConsumed = DateTime.now().millisecondsSinceEpoch - startMs;
+    return HttpReply(response, msConsumed);
   }
 }

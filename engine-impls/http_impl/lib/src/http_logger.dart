@@ -91,7 +91,7 @@ class HttpLoggingIntervener
     final log = StringBuffer('\n<-- ${reply.statusCode}');
     log.write(' ${reply.message}');
     log.write(' ${reply.rawResponse.request?.url}');
-    log.writeln(' (${reply.timeConsuming}ms)');
+    log.writeln(' (${reply.timeConsumed}ms)');
 
     reply.headers.forEach((k, v) => log.writeln('$k: $v'));
 

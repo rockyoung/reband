@@ -31,17 +31,15 @@ class RebandServiceGenerator
   static const _gvnPartList = r'composedPart$';
   static const _gvnBodyList = r'composedBody$';
 
-  static const _ignore = '// ignore_for_file: equal_keys_in_map';
+  static const _ignore = '// ignore_for_class: equal_keys_in_map';
 
   late final _logger = Logger('reband_generat.service');
 
-  late final ClassElement _annotatedClass;
+  late ClassElement _annotatedClass;
 
-  late final DartType _rebandType;
+  late String _rebandType;
 
-  late final DartType _replyType;
-
-  late final String _basePath;
+  late String _basePath;
 
   @override
   FutureOr<String> generateForAnnotatedElement(
@@ -49,13 +47,13 @@ class RebandServiceGenerator
     ConstantReader annotation,
     BuildStep buildStep,
   ) {
-    // The definition of ClassElement from analyzer is a little broad,
-    // it includes not only class in general(concrete or abstract),
-    // but also mixin(or mixin application) and enum class, which are
-    // special kind of class too.
+    // The definition of ClassElement from analyzer is a little broad, that
+    // includes not only class in general (concrete or abstract), but also
+    // mixin (or mixin application) and enum class, which are special kind
+    // of class too.
     //
-    // Marked class by RESTfulApi annotation will be used as a super-class
-    // for the generated sub-class only with the keyword `extends`,
+    // Marked class by RESTfulApi annotation will be used as an interface for
+    // the generated implementation class only with the keyword `implements`,
     // so we should filter out enum, mixin and mixin application.
     if (element is! ClassElement ||
         !element.isAbstract ||
@@ -63,37 +61,52 @@ class RebandServiceGenerator
         element.isMixin ||
         element.isMixinApplication) {
       throw InvalidGenerationSourceError(
-          'RESTfulApis annotation can not target on ${element.kind.name} `${element.displayName}`(enum, mixin and mixin application, these special kind of classes are illegal too)! ONLY ABSTRACT CLASS are supported.');
+          'RESTfulApis annotation can not target on ${element.kind.name} `${element.displayName}` (enum, mixin and mixin application, these special kind of classes are illegal too)! ONLY ABSTRACT CLASS are supported.');
     }
 
-    final rebandServiceTc = _getCheckerOf(reband.RebandService);
-    try {
-      final rebandServiceType = element.allSupertypes
-          .firstWhere(rebandServiceTc.isAssignableFromType);
-      _rebandType =
-          _getRecursivelyUntilItsExactly(rebandServiceType, rebandServiceTc)
-              .typeArguments[0]; // RebandService has only one type argument.
-    } catch (_) {
-      throw InvalidGenerationSourceError(
-          '`${element.displayName}` MUST directly or indirectly inherited from `RebandService` by `extends`, `implements` or `with`!');
-    }
+    // final rebandServiceTc = _getCheckerOf(reband.RebandService);
+    // try {
+    //   final rebandServiceType = element.allSupertypes
+    //       .firstWhere(rebandServiceTc.isAssignableFromType);
+    //   _rebandType =
+    //       _getRecursivelyUntilItsExactly(rebandServiceType, rebandServiceTc)
+    //           .typeArguments[0]; // RebandService has only one type argument.
+    // } catch (_) {
+    //   throw InvalidGenerationSourceError(
+    //       '`${element.displayName}` MUST directly or indirectly inherited from `RebandService` by `extends`, `implements` or `with`!');
+    // }
 
-    final rebandTc = _getCheckerOf(reband.Reband);
-    if (rebandTc.isExactlyType(_rebandType)) {
-      throw InvalidGenerationSourceError(
-          'Avoid using `Reband` as type parameter for `RebandService`, replace `Reband` with one of it\'s sub-class that you have implemented.');
-    }
-    try {
-      final rebandType = (_rebandType as InterfaceType)
-          .allSupertypes
-          .firstWhere(rebandTc.isAssignableFromType);
-      _replyType = _getRecursivelyUntilItsExactly(rebandType, rebandTc)
-          .typeArguments[2]; // Reply type arg is at index 2 of Reband.
-    } catch (e) {
-      rethrow;
-    }
+    // final rebandTc = _getCheckerOf(reband.Reband);
+    // if (rebandTc.isExactlyType(_rebandType)) {
+    //   throw InvalidGenerationSourceError(
+    //       'Avoid using `Reband` as type parameter for `RebandService`, replace `Reband` with one of it\'s sub-class that you have implemented.');
+    // }
+    // try {
+    //   final rebandType = (_rebandType as InterfaceType)
+    //       .allSupertypes
+    //       .firstWhere(rebandTc.isAssignableFromType);
+    //   _replyType = _getRecursivelyUntilItsExactly(rebandType, rebandTc)
+    //       .typeArguments[2]; // Reply type arg is at index 2 of Reband.
+    // } catch (e) {
+    //   rethrow;
+    // }
 
     _basePath = annotation.peek('basePath')?.stringValue ?? '';
+
+    final annDartType = annotation.objectValue.type;
+    if (annDartType is InterfaceType) {
+      final exactlyRESTfulApis =
+          _getRecursivelyUntilItsExactly(annDartType, typeChecker);
+      final rebandDt = exactlyRESTfulApis.typeArguments[0];
+      final rebandTc = _getCheckerOf(reband.Reband);
+      if (rebandTc.isAssignableFromType(rebandDt)) {
+        _rebandType = rebandDt.toString();
+      } else {
+        _rebandType = (reband.Reband).toString();
+      }
+    } else {
+      _rebandType = (reband.Reband).toString();
+    }
 
     _annotatedClass = element;
 
@@ -117,7 +130,10 @@ class RebandServiceGenerator
   String _generateImplementationClassFormattedString() {
     final classBuilder = Class((builder) => builder
       ..name = '_\$${_annotatedClass.name}'
-      ..extend = refer(_annotatedClass.name)
+      // ..extend = refer(_annotatedClass.name)
+      // `extends` make both abstract and implement class have more
+      // restrictions to their constructors.
+      ..implements.add(refer(_annotatedClass.name))
       ..fields.add(_buildRebandFiled())
       ..constructors.add(_buildConstructor())
       ..methods.addAll(_verifyAllMethodsCorrectnessAndBuild()));
@@ -128,7 +144,7 @@ class RebandServiceGenerator
 
   Field _buildRebandFiled() => Field((builder) => builder
     ..name = _gfnReband
-    ..type = refer((_rebandType).toString())
+    ..type = refer(_rebandType)
     ..modifier = FieldModifier.final$);
 
   Constructor _buildConstructor() => Constructor((builder) => builder
@@ -151,20 +167,23 @@ class RebandServiceGenerator
 
         final futureTypeArg =
             (returnType as ParameterizedType).typeArguments[0];
-        if (futureTypeArg != _replyType) {
+        final replyTc = _getCheckerOf(reband.Reply);
+        if (!replyTc.isAssignableFromType(futureTypeArg)) {
           throw InvalidGenerationSourceError(
-              'The `Future` type argument of abstract method `${method.name}` in `${_annotatedClass.name}` should be same with the one passed by `RebandService`!');
+              'The `Future` type argument of abstract method `${method.name}` in `${_annotatedClass.name}` should be type of `Reply`');
         }
 
         final hmAnnCr = _getAnnotationCr(method, reband.HttpMethod);
         if (hmAnnCr.isNull) {
           throw InvalidGenerationSourceError(
-              'Abstract method `${method.name}` in `${_annotatedClass.name}` dose not have any specific http method annotation targeted on!');
+              'Abstract method `${method.name}` in `${_annotatedClass.name}` dose not have any specific http method annotation targeted on, reband_generat does not know how to generate code for you!');
         } else {
           targetMethods[hmAnnCr] = method;
         }
+      } else if (!method.isStatic) {
+        throw InvalidGenerationSourceError(
+            'Abstract class `${_annotatedClass.name}` should not have concrete method `${method.name}` (except static) since reband_generat only using `implicit interfaces` to implement classes for you!');
       }
-      // Skip all methods we should not care about.
     }
 
     return targetMethods.entries.map((e) => _buildMethod(e.key, e.value));
@@ -436,5 +455,5 @@ class RebandServiceGenerator
 }
 
 extension DartTypeExtension on DartType {
-  bool get isNullable => nullabilitySuffix != NullabilitySuffix.none;
+  bool get isNullable => nullabilitySuffix == NullabilitySuffix.question;
 }

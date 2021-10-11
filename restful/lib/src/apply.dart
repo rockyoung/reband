@@ -2,7 +2,7 @@ import 'package:meta/meta.dart';
 import 'package:reband_restful/reband_restful.dart';
 
 /// Abstraction class for generating an HTTP request of type [T] by [submit],
-/// in a sense, this is also the wrap to the request [T] of data part.
+/// in a sense, this is also the data part wrap for the [T] request.
 ///
 /// The basic role of implemention classes is to create a [T] instance while
 /// the [submit] method is invoking, therefore, it can also be regarded as a
@@ -11,7 +11,6 @@ abstract class Apply<T> {
   static const emptyHeaders = <String, String>{};
 
   /// The http method used to new a request.
-  // same as `abstract final String method`, but more simplify.
   String get method;
 
   /// The http uri used to new a request.
@@ -22,9 +21,6 @@ abstract class Apply<T> {
 
   /// The http body used to new a request.
   dynamic get body;
-
-  // making subclasses can have constant constructor.
-  const Apply();
 
   /// 'Submit' this [Apply] to create a [T] type `Request`, usually it should
   /// be called in your [Reband.launch] implementation to do the real sending
@@ -42,4 +38,7 @@ abstract class Apply<T> {
   /// Whether current body is type of `List<Multipart>`.
   @nonVirtual
   bool get isMultpart => body is List<Multipart>;
+
+  // just making subclasses can have constant constructor.
+  const Apply();
 }

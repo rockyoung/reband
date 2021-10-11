@@ -1,6 +1,9 @@
 /// Fake implementations of `reband_restful` library just for the example to
 /// generat_example.dart.
 
+import 'dart:typed_data';
+import 'dart:async';
+
 import 'package:reband_restful/reband_restful.dart';
 
 class FakeRequest {}
@@ -28,8 +31,19 @@ class FakeApply extends Apply<FakeRequest> {
   Future<FakeRequest> submit() async => FakeRequest();
 }
 
-class FakeReply extends Reply<FakeResponse> {
-  FakeReply(FakeResponse rawResponse) : super(rawResponse, 100);
+class FakeReply extends Reply {
+  final FakeResponse rawResponse;
+
+  @override
+  final int timeConsumed = -1;
+
+  FakeReply(this.rawResponse);
+
+  @override
+  FutureOr<String> get bodyString => '';
+
+  @override
+  FutureOr<Uint8List> get bodyBytes => Uint8List(0);
 
   @override
   Stream<List<int>> get bodyStream => Stream.empty();
@@ -45,7 +59,13 @@ class FakeReply extends Reply<FakeResponse> {
 }
 
 class FakeReband extends Reband<FakeClient, FakeApply, FakeReply> {
-  FakeReband(String baseUrl) : super(FakeClient(), baseUrl);
+  @override
+  final FakeClient engine = FakeClient();
+
+  @override
+  final String baseUrl;
+
+  FakeReband(this.baseUrl);
 
   @override
   FakeApply buildApply(String method, Uri uri,
