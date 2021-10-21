@@ -1,7 +1,7 @@
 name: reband_dio
-description: An implementation for reband_restful with dio.
+description: An implementation for reband_restful with `dio`.
 version: 1.0.0
-homepage: https://github.com/rockyoung/reband/blob/main/engine-impls/dio_impl
+homepage: https://github.com/rockyoung/reband/blob/main/engine-impls/reband_dio
 
 environment:
   sdk: '>=2.12.0 <3.0.0'

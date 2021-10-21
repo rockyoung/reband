@@ -1,4 +1,4 @@
-A library for Dart developers.
+A library of abstractions and interfaces for http-client implementations and [reband_generat][generat] to generate consistent RESTful network code, **separated** from the coupling of the specific http-client usage details.
 
 ## Usage
 
@@ -16,4 +16,5 @@ main() {
 
 Please file feature requests and bugs at the [issue tracker][tracker].
 
-[tracker]: http://example.com/issues/replaceme
+[generat]: https://github.com/rockyoung/reband/blob/main/generat
+[tracker]: https://github.com/rockyoung/reband/issues
