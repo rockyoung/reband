@@ -21,6 +21,8 @@ dev_dependencies:
   test: ^1.17.12
 
 dependency_overrides:
+  source_gen_test: ^1.0.2
+  # path: ^1.8.1
   # Comment before publish
   reband_restful:
     path: ../restful
